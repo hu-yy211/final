@@ -1,0 +1,139 @@
+# Build directories
+/build/
+/bin/
+/lib/
+/cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+# Object and binary files
+*.o
+*.obj
+*.so
+*.dylib
+*.a
+*.lib
+*.exe
+*.out
+*.app
+*.run
+core
+*.core
+
+# Logs, reports, coverage
+*.log
+*.txt
+*.csv
+coverage/
+*.gcno
+*.gcda
+*.gcov
+
+# IDE/editor
+.vscode/
+*.code-workspace
+.idea/
+*.sublime-*
+*.swp
+*~ 
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python artifacts (if any)
+__pycache__/
+*.pyc
+*.pyo
+
+# Generated visualization/export files
+*.png
+*.jpg
+*.jpeg
+*.ppm
+*.svg
+
+# Misc
+*.zip
+*.tar.gz
+*.tgz
+tags
+
+# Optionally ignore build artifacts of example apps
+example*/run*
+example*/bin/
+example*/build/
+```// filepath: /Users/huyy/code/final/.gitignore
+# Build directories
+/build/
+/bin/
+/lib/
+/cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+# Object and binary files
+*.o
+*.obj
+*.so
+*.dylib
+*.a
+*.lib
+*.exe
+*.out
+*.app
+*.run
+core
+*.core
+
+# Logs, reports, coverage
+*.log
+*.txt
+*.csv
+coverage/
+*.gcno
+*.gcda
+*.gcov
+
+# IDE/editor
+.vscode/
+*.code-workspace
+.idea/
+*.sublime-*
+*.swp
+*~ 
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python artifacts (if any)
+__pycache__/
+*.pyc
+*.pyo
+
+# Generated visualization/export files
+*.png
+*.jpg
+*.jpeg
+*.ppm
+*.svg
+
+# Misc
+*.zip
+*.tar.gz
+*.tgz
+tags
+
+# Optionally ignore build artifacts of example apps
+example*/run*
+example*/bin/
+example*/build/
