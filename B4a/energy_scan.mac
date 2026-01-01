@@ -1,0 +1,28 @@
+/run/numberOfThreads 1
+/run/initialize
+/gun/particle pi-
+/gun/position 0 0 -5 cm
+
+/gun/energy 20 GeV
+/run/beamOn 1000
+
+/gun/energy 40 GeV
+/run/beamOn 1000
+
+/gun/energy 80 GeV
+/run/beamOn 1000
+
+/gun/energy 100 GeV
+/run/beamOn 1000
+
+/gun/energy 150 GeV
+/run/beamOn 1000
+
+/gun/energy 200 GeV
+/run/beamOn 1000
+
+/gun/energy 250 GeV
+/run/beamOn 1000
+
+/gun/energy 300 GeV
+/run/beamOn 1000

@@ -27,48 +27,37 @@
 /// \file B4/B4a/include/RunAction.hh
 /// \brief Definition of the B4::RunAction class
 
-#ifndef B4RunAction_h
-#define B4RunAction_h 1
+#ifndef RunAction_h
+#define RunAction_h 1
 
 #include "G4UserRunAction.hh"
 #include "globals.hh"
 
 class G4Run;
-
-namespace B4
-{
-
-/// Run action class
-///
-/// It accumulates statistic and computes dispersion of the energy deposit
-/// and track lengths of charged particles with use of analysis tools:
-/// H1D histograms are created in BeginOfRunAction() for the following
-/// physics quantities:
-/// - Edep in absorber
-/// - Edep in gap
-/// - Track length in absorber
-/// - Track length in gap
-/// The same values are also saved in the ntuple.
-/// The histograms and ntuple are saved in the output file in a format
-/// according to a specified file extension.
-///
-/// In EndOfRunAction(), the accumulated statistic and computed
-/// dispersion is printed.
-///
+class TFile;
+class TTree;
 
 class RunAction : public G4UserRunAction
 {
-  public:
-    RunAction();
-    ~RunAction() override = default;
+public:
+  RunAction();
+  virtual ~RunAction();
 
-    void BeginOfRunAction(const G4Run*) override;
-    void   EndOfRunAction(const G4Run*) override;
+  virtual void BeginOfRunAction(const G4Run* run);
+  virtual void EndOfRunAction(const G4Run* run);
+
+  // 填充单个事件数据到 ROOT TTree
+  void FillEvent(G4int eventID, G4int ns, G4int nc, G4double energy = 0);
+
+private:
+  TFile* fRootFile;
+  TTree* fEventTree;
+  
+  // TTree 分支变量
+  G4int fEventID;
+  G4int fNsPhotons;      // 闪烁光子总数
+  G4int fNcPhotons;      // 切伦科夫光子总数
+  G4double fInputEnergy; // 输入粒子能量
 };
 
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 #endif
-

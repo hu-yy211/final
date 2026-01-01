@@ -50,6 +50,8 @@
 
 #include "G4PhysicalConstants.hh"
 #include "G4SystemOfUnits.hh"
+#include "FiberSD.hh"
+#include "G4SDManager.hh"
 
 #include <string>
 #include <vector>
@@ -370,13 +372,34 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   return worldPV;
 }
 
-// ConstructSDandField: 挂接全局场（SD 在后续实现）
 void DetectorConstruction::ConstructSDandField()
 {
+  // global magnetic field (kept as before)
   G4ThreeVector fieldValue;
   fMagFieldMessenger = new G4GlobalMagFieldMessenger(fieldValue);
   fMagFieldMessenger->SetVerboseLevel(1);
   G4AutoDelete::Register(fMagFieldMessenger);
-}
 
-} // namespace B4
+  // --- Sensitive detectors for fibers ---
+  auto sdMan = G4SDManager::GetSDMpointer();
+  auto scintSD  = new FiberSD("ScintFiberSD", "ScintFiberHitsCollection", 0);  // 0 表示闪烁光纤
+  auto quartzSD = new FiberSD("QuartzFiberSD", "QuartzFiberHitsCollection", 1); // 1 表示切伦科夫光纤
+
+  sdMan->AddNewDetector(scintSD);
+  sdMan->AddNewDetector(quartzSD);
+
+  // Attach SDs to logical volumes by name
+  G4LogicalVolumeStore* lvStore = G4LogicalVolumeStore::GetInstance();
+  for (auto lv : *lvStore) {
+    G4String name = lv->GetName();
+    if (name.find("ScintFiber") != G4String::npos) {
+      lv->SetSensitiveDetector(scintSD);
+    } else if (name.find("QuartzFiber") != G4String::npos
+               || name.find("CkovFiber") != G4String::npos
+               || name.find("Ckov") != G4String::npos) {
+      lv->SetSensitiveDetector(quartzSD);
+    }
+  }
+}
+}
+// ConstructSDandField: 挂接全局场（SD 在后续实现）

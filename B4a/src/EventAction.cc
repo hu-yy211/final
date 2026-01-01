@@ -29,14 +29,17 @@
 
 #include "EventAction.hh"
 #include "RunAction.hh"
+#include "PrimaryGeneratorAction.hh"  
+#include "FiberHit.hh"
+#include "G4ParticleGun.hh" 
 
-#include "G4AnalysisManager.hh"
-#include "G4RunManager.hh"
 #include "G4Event.hh"
+#include "G4RunManager.hh"
+#include "G4SDManager.hh"
+#include "G4HCofThisEvent.hh"
 #include "G4UnitsTable.hh"
-
-#include "Randomize.hh"
 #include <iomanip>
+#include "CLHEP/Units/SystemOfUnits.h"
 
 namespace B4a
 {
@@ -45,7 +48,7 @@ namespace B4a
 
 void EventAction::BeginOfEventAction(const G4Event* /*event*/)
 {
-  // initialisation per event
+  // 初始化每事件变量（保留兼容性，实际不再使用）
   fEnergyAbs = 0.;
   fEnergyGap = 0.;
   fTrackLAbs = 0.;
@@ -56,43 +59,79 @@ void EventAction::BeginOfEventAction(const G4Event* /*event*/)
 
 void EventAction::EndOfEventAction(const G4Event* event)
 {
-  // get analysis manager
-  auto analysisManager = G4AnalysisManager::Instance();
+  // ===== 获取 HitsCollection =====
+  auto hce = event->GetHCofThisEvent();
+  if(!hce) {
+    G4cout << "Warning: No HCofThisEvent in event " << event->GetEventID() << G4endl;
+    return;
+  }
+  
+  auto sdManager = G4SDManager::GetSDMpointer();
+  G4int scintHCID = sdManager->GetCollectionID("ScintFiberHitsCollection");
+  G4int quartzHCID = sdManager->GetCollectionID("QuartzFiberHitsCollection");
+  
+  // 首次运行时 ID 可能为 -1，获取后会缓存
+  if(scintHCID < 0 || quartzHCID < 0) {
+    if(event->GetEventID() == 0) {
+      G4cout << "Warning: HitsCollection ID not found in first event. "
+             << "ScintID=" << scintHCID << ", QuartzID=" << quartzHCID << G4endl;
+    }
+    return;
+  }
+  
+  auto scintHC = static_cast<FiberHitsCollection*>(hce->GetHC(scintHCID));
+  auto quartzHC = static_cast<FiberHitsCollection*>(hce->GetHC(quartzHCID));
+  
+  // ===== 聚合光子数（所有 tower 的总和）=====
+  G4int totalNs = 0;  // 闪烁光子总数
+  G4int totalNc = 0;  // 切伦科夫光子总数
+  
+  if(scintHC) {
+    for(size_t i = 0; i < scintHC->entries(); i++) {
+      totalNs += (*scintHC)[i]->GetNsPhotons();
+    }
+  }
+  
+  if(quartzHC) {
+    for(size_t i = 0; i < quartzHC->entries(); i++) {
+      totalNc += (*quartzHC)[i]->GetNcPhotons();
+    }
+  }
+  
+  // ===== 获取 RunAction 并填充数据到 ROOT =====
+  auto runAction = const_cast<RunAction*>(
+    static_cast<const RunAction*>(
+      G4RunManager::GetRunManager()->GetUserRunAction()));
+  
+  if(runAction) {
+    // 获取 PrimaryGeneratorAction
+    auto generatorAction = const_cast<B4::PrimaryGeneratorAction*>(
+      static_cast<const B4::PrimaryGeneratorAction*>(
+        G4RunManager::GetRunManager()->GetUserPrimaryGeneratorAction()));
+    
+    G4double inputEnergy = 0; // 默认值
+    if (generatorAction) {
+      auto particleGun = generatorAction->GetParticleGun();
+      if (particleGun) {
+        inputEnergy = particleGun->GetParticleEnergy() / CLHEP::GeV;
+      }
+    }
 
-  // fill histograms
-  analysisManager->FillH1(0, fEnergyAbs);
-  analysisManager->FillH1(1, fEnergyGap);
-  analysisManager->FillH1(2, fTrackLAbs);
-  analysisManager->FillH1(3, fTrackLGap);
-
-  // fill ntuple
-  analysisManager->FillNtupleDColumn(0, fEnergyAbs);
-  analysisManager->FillNtupleDColumn(1, fEnergyGap);
-  analysisManager->FillNtupleDColumn(2, fTrackLAbs);
-  analysisManager->FillNtupleDColumn(3, fTrackLGap);
-  analysisManager->AddNtupleRow();
-
-  // Print per event (modulo n)
-  //
+    runAction->FillEvent(event->GetEventID(), totalNs, totalNc, inputEnergy);
+  }
+  
+  // ===== 定期打印调试信息 =====
   auto eventID = event->GetEventID();
   auto printModulo = G4RunManager::GetRunManager()->GetPrintProgress();
-  if ( ( printModulo > 0 ) && ( eventID % printModulo == 0 ) ) {
-    G4cout
-       << "   Absorber: total energy: " << std::setw(7)
-                                        << G4BestUnit(fEnergyAbs,"Energy")
-       << "       total track length: " << std::setw(7)
-                                        << G4BestUnit(fTrackLAbs,"Length")
-       << G4endl
-       << "        Gap: total energy: " << std::setw(7)
-                                        << G4BestUnit(fEnergyGap,"Energy")
-       << "       total track length: " << std::setw(7)
-                                        << G4BestUnit(fTrackLGap,"Length")
-       << G4endl;
-       
-    G4cout << "--> End of event " << eventID << "\n" << G4endl;       
+  
+  if((printModulo > 0) && (eventID % printModulo == 0)) {
+    G4cout << "Event " << eventID 
+           << ": Ns = " << totalNs 
+           << ", Nc = " << totalNc << G4endl;
+    G4cout << "--> End of event " << eventID << "\n" << G4endl;
   }
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo.....
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-} 
+}
