@@ -25,7 +25,7 @@ FiberSD::FiberSD(const G4String& name,
     fScintillationYield   = 10000.0 / CLHEP::MeV; // 文档要求
     fCollectionEfficiency = 0.9;                  // 文档要求
   } else {                       // 石英切伦科夫光纤
-    fRefractiveIndex      = 1.474;                // 示例值，可按实际介质调整
+    fRefractiveIndex      = 1.458;                // 示例值，可按实际介质调整
     fCollectionEfficiency = 0.9;                  // 文档要求
   }
 }

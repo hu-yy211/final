@@ -95,10 +95,12 @@ void DetectorConstruction::DefineMaterials()
 G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 {
   // Geometry parameters according to DREAM specifications
+
   G4int nofTowersX = 4;        // 4 towers in X direction
   G4int nofTowersY = 4;        // 4 towers in Y direction
   G4int nofRodsPerTowerX = 16; // 16 rods per tower in X
   G4int nofRodsPerTowerY = 16; // 16 rods per tower in Y
+
   
   G4double rodLength = 2.0*m;           // Copper rod length
   G4double rodCrossSection = 4.0*mm;    // 4mm x 4mm cross section
@@ -154,7 +156,6 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
                  0,               // copy number
                  fCheckOverlaps); // checking overlaps
 
-  // Apply detector rotation (方案A: +2°绕y轴, +0.7°绕x轴)
   G4RotationMatrix* detectorRotation = new G4RotationMatrix();
   detectorRotation->rotateY(2.0*degree);   // 水平旋转 +2°
   detectorRotation->rotateX(0.7*degree);   // 俯仰 +0.7°
@@ -256,66 +257,39 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
           holeLV->SetVisAttributes(G4VisAttributes::GetInvisible());
           new G4PVPlacement(nullptr, G4ThreeVector(), holeLV, "RodHolePV", rodLV, false, 0, fCheckOverlaps);
 
-          // compute safe radii for fiber placement (do not change holeDiameter)
+          // compute safe radius for fiber placement (outer ring + clearance)
           G4double safety = 0.05*mm; // small clearance from wall
           G4double outerRingR = holeRadius - fiberRadius - safety;
           if (outerRingR < 0) outerRingR = 0.0;
 
-          G4double innerRingR = outerRingR * 0.7;
-          if (innerRingR < 0) innerRingR = 0.0;
+          // center quartz fiber
+          auto fiberQuartzCenterS
+            = new G4Tubs("QuartzFiberCenter", 0, fiberRadius, rodLength/2, 0, 360*degree);
+          auto fiberQuartzCenterLV
+            = new G4LogicalVolume(fiberQuartzCenterS, quartzMaterial, "QuartzFiberCenter");
+          new G4PVPlacement(nullptr, G4ThreeVector(), fiberQuartzCenterLV, "QuartzFiberCenter",
+                            holeLV, false, 0, fCheckOverlaps);
 
-          // Create scintillator fibers (3根塑料闪烁光纤) placed on outerRingR
-          for (G4int iScint = 0; iScint < 3; iScint++) {
-            G4double scintAngle = (iScint * 120.0) * degree; // 120°间隔排列
-            G4double fiberPosX = outerRingR * std::cos(scintAngle);
-            G4double fiberPosY = outerRingR * std::sin(scintAngle);
-            
-            auto fiberScintS
-              = new G4Tubs("ScintFiber",             // its name
-                           0, fiberRadius, rodLength/2, 0, 360*degree); // its size
+          // outer ring: alternate quartz and scintillator every 60 degrees
+          for (G4int iFiber = 0; iFiber < 6; iFiber++) {
+            G4double angle = (iFiber * 60.0) * degree; // 60° spacing
+            G4double fiberPosX = outerRingR * std::cos(angle);
+            G4double fiberPosY = outerRingR * std::sin(angle);
 
-            auto fiberScintLV
-              = new G4LogicalVolume(
-                         fiberScintS,             // its solid
-                         scintillatorMaterial,      // its material
-                         "ScintFiber");           // its name
+            G4bool isQuartz = (iFiber % 2 == 0); // even: quartz, odd: scintillator
+            auto fiberS = new G4Tubs(isQuartz ? "QuartzFiber" : "ScintFiber",
+                                     0, fiberRadius, rodLength/2, 0, 360*degree);
+            auto fiberLV = new G4LogicalVolume(fiberS,
+                                               isQuartz ? quartzMaterial : scintillatorMaterial,
+                                               isQuartz ? "QuartzFiber" : "ScintFiber");
 
-            new G4PVPlacement(
-                         nullptr,          // no rotation
-                         G4ThreeVector(fiberPosX, fiberPosY, 0),  // its position
-                         fiberScintLV,                                     // its logical volume
-                         "ScintFiber",                                     // its name
-                         holeLV,                                   // place inside hole
-                         false,                                     // no boolean operation
-                         iScint,                                         // copy number
-                         fCheckOverlaps);                           // checking overlaps
-          }
-          
-          // Create quartz fibers (4根石英光纤) placed on innerRingR
-          for (G4int iQuartz = 0; iQuartz < 4; iQuartz++) {
-            G4double quartzAngle = (iQuartz * 90.0) * degree; // 90°间隔排列
-            G4double fiberPosX = innerRingR * std::cos(quartzAngle);
-            G4double fiberPosY = innerRingR * std::sin(quartzAngle);
-            
-            auto fiberQuartzS
-              = new G4Tubs("QuartzFiber",             // its name
-                           0, fiberRadius, rodLength/2, 0, 360*degree); // its size
-
-            auto fiberQuartzLV
-              = new G4LogicalVolume(
-                         fiberQuartzS,             // its solid
-                         quartzMaterial,      // its material
-                         "QuartzFiber");           // its name
-
-            new G4PVPlacement(
-                         nullptr,          // no rotation
-                         G4ThreeVector(fiberPosX, fiberPosY, 0),  // its position
-                         fiberQuartzLV,                                     // its logical volume
-                         "QuartzFiber",                                     // its name
-                         holeLV,                                   // place inside hole
-                         false,                                     // no boolean operation
-                         iQuartz,                                         // copy number
-                         fCheckOverlaps);                           // checking overlaps
+            new G4PVPlacement(nullptr, G4ThreeVector(fiberPosX, fiberPosY, 0),
+                              fiberLV,
+                              isQuartz ? "QuartzFiber" : "ScintFiber",
+                              holeLV,
+                              false,
+                              iFiber + 1, // +1 to distinguish from center fiber
+                              fCheckOverlaps);
           }
         }
       }
